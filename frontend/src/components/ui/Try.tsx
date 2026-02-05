@@ -1,0 +1,159 @@
+import { useState, useRef } from 'react';
+import { CloudUpload, File, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+export default function DragDropDemo() {
+  const [dragActive, setDragActive] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      handleFiles(e.target.files);
+    }
+  };
+
+  const handleFiles = (fileList: FileList) => {
+    const newFiles = Array.from(fileList);
+    setFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const removeFile = (idx: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const onButtonClick = () => {
+    inputRef.current?.click();
+  };
+
+  return (
+    <div className="p-6 max-w-2xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6 text-blue-900 text-center">Upload Medical Records</h2>
+
+      <div
+        className={`relative flex flex-col items-center justify-center w-full min-h-[300px] p-8 border-2 border-dashed rounded-xl transition-all duration-200 ease-in-out ${dragActive
+          ? "border-blue-500 bg-blue-50 scale-[1.01]"
+          : "border-gray-300 bg-gray-50 hover:bg-gray-100"
+          }`}
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleChange}
+          accept="image/*,application/pdf"
+        />
+
+        <div className="flex flex-col items-center text-center space-y-4 pointer-events-none">
+          <div className={`p-4 rounded-full transition-colors ${dragActive ? 'bg-blue-100' : 'bg-white shadow-sm'}`}>
+            <CloudUpload
+              className={`w-12 h-12 ${dragActive ? 'text-blue-600' : 'text-gray-400'}`}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-lg font-medium text-gray-700">
+              Drag & Drop files here
+            </p>
+            <p className="text-sm text-gray-500">
+              or
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={(e) => {
+              // We need to prevent the drag events from firing on the button click if they propagate 
+              // but pointer-events-none on parent wrapper handles simple cases.
+              // However, the button needs pointer-events-auto.
+              // Best structure: The overlay handles drag, content is z-indexed or structured cleanly.
+              // Here we just proxy the click.
+              // Since the parent div listens to click? No, parent listens to drag.
+              // We need to make sure the Button is clickable.
+              e.stopPropagation(); // Stop propagation to avoid any parent click handlers if they existed
+              onButtonClick();
+            }}
+            className="pointer-events-auto border-blue-200 text-blue-600 hover:text-blue-700 hover:bg-blue-50 hover:border-blue-300 px-8"
+          >
+            Browse Files
+          </Button>
+
+          <p className="text-xs text-gray-400 mt-4">
+            Supported formats: PDF, JPG, PNG
+          </p>
+        </div>
+      </div>
+
+      {files.length > 0 && (
+        <div className="mt-8 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Selected Files</h3>
+          <div className="grid gap-3">
+            {files.map((file, idx) => (
+              <div
+                key={`${file.name}-${idx}`}
+                className="group flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center space-x-3 overflow-hidden">
+                  <div className="p-2 bg-blue-50 rounded-md">
+                    <File className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-medium text-gray-700 truncate max-w-[200px] sm:max-w-xs">{file.name}</span>
+                    <span className="text-xs text-gray-400">{(file.size / 1024).toFixed(1)} KB</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => removeFile(idx)}
+                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                  aria-label="Remove file"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end pt-4 border-t border-gray-100">
+            <Button
+              onClick={() => {
+                alert("Files submitted for analysis!");
+                setFiles([]);
+              }}
+              className="bg-blue-900 hover:bg-blue-800 text-white px-6"
+            >
+              Submit Analysis
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
